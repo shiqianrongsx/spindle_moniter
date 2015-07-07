@@ -1,0 +1,75 @@
+*{margin:0;padding:0;} 
+#out{
+	position:absolute;
+	left:50%;
+	top:100px;
+	margin-left:-658px;	
+	height:380px;
+	width:1316px;
+	border:2px solid black;
+}
+#box{
+	width:600px;
+	height:30px;
+	border:2px solid black; 
+	position:relative; 
+	left:381px;
+	top:341px;
+} 
+#canvas1{
+	/*background:green;*/
+	position:absolute;
+	left:0;
+	top:0;
+	z-index:1;
+}
+#canvas2{
+	/*background:red;*/
+	position:absolute;
+	left:56.5px;
+	top:20.5px;
+	z-index:2;
+}
+#canvas3{
+	position:absolute;
+	left:56.5px;
+	top:20.5px;
+	z-index:3;
+}
+#choose{
+	position:absolute;
+	left:300px;
+	top:170px;
+	display:none;
+	width:100px;
+	height:170px;
+	background:#999;
+	z-index:4;
+}
+.btnPrevious{
+	width:100px;
+	height:28px;
+	float:left;
+}
+.btnNext{
+	width:100px;
+	height:28px;
+	float:right;
+}
+#del,#delReset{
+	width:90px;
+	height:25px;
+	font-size:16px;
+	margin-top:10px;
+	margin-bottom:10px;
+}
+#delSelected{
+	position:absolute;
+	display:none;
+	top:190px;
+	width:100px;
+	height:100px;
+	background:#999;
+	text-align:center;
+	z-index:4;
+}

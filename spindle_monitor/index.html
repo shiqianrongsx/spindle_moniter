@@ -1,0 +1,287 @@
+﻿<!--
+1. 1s显示100个点
+-->
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" type="text/css" href="styles/style.css"/>
+	<script src="datas/data.js"></script>
+	<script src="scripts/btnPreNext.js"></script>
+	<script src="scripts/chooseBox.js"></script>
+	<script src="scripts/delFillRect.js"></script>
+	<title>spindle monitor</title>
+</head>
+<body>
+	<div id="out">
+		<canvas id="canvas1" width="1314" height="341">hey,您的浏览器不支持html5，换个浏览器吧，比如google chrome，firefox</canvas>
+		<canvas id="canvas2" width="1250" height="308">hey,您的浏览器不支持html5，换个浏览器吧，比如google chrome，firefox</canvas>
+		<canvas id="canvas3" width="1250" height="241">hey,您的浏览器不支持html5，换个浏览器吧，比如google chrome，firefox</canvas>
+		<div id="box"> 
+			<input type="button" class="btnPrevious" name="previous" value="上一个" onclick="preWave();"/>
+			<input type="button" class="btnNext" name="next" value="下一个" onclick="nextWave();"/>
+		</div> 
+	</div>
+	<div id="choose">
+		<!--form action="" method="post"-->
+			<br/>
+			&nbsp <input type="radio" name="chooseOption" id="Definitely" value="Definitely" onclick="changeFillColor();"/><label for="Definitely"><font color="#006400"><b>肯定</b></font></label><br/><br/>
+			&nbsp <input type="radio" name="chooseOption" id="Probably" value="Probably" onclick="changeFillColor();"/><label for="Probably"><font color="#0033FF"><b>可能</b></font></label><br/><br/>
+			&nbsp <input type="radio" name="chooseOption" id="Guessing" value="Guessing" onclick="changeFillColor();"/><label for="Guessing"><font color="#8b0000"><b>猜测</b></font></label><br/><br/>
+			&nbsp <input type="reset" value="取消" id="reset" onclick="resetRes()"/>
+				  <input type="submit" value="确定" id="submit" onclick="subRes()"/>
+			<br/>
+		<!--/form-->
+	</div>
+	<div id="delSelected">
+		<input type="button" id="del" value="删除"/>
+		<input type="button" id="delReset" value="取消"/>
+	</div>
+<!--------------------------------------------------------------------------------------------------------------------------------------------->
+	<script>
+		var canvas1 = document.getElementById("canvas1");
+		var ctx1 = canvas1.getContext("2d");
+		var canvas2 = document.getElementById("canvas2");
+		var ctx2 = canvas2.getContext("2d");
+		var canvas3 = document.getElementById("canvas3");
+		var ctx3 = canvas3.getContext("2d");
+		var out=document.getElementById("out");
+		var choose=document.getElementById("choose");
+		var chooseOption=document.getElementsByName("chooseOption");
+		var delsSelected=document.getElementById("delSelected");
+		var del=document.getElementById("del");
+		var delReset=document.getElementById("delReset");
+		/*var Dval=document.getElementById("Definitely");
+		var Pval=document.getElementById("Probably");
+		var Gval=document.getElementById("Guessing");*/
+/*------------------------------------------------------------初始化一系列参数---------------------------------------------------------*/
+		var initialWidth = Math.min(screen.width,1314); 
+		var kOptions = {                
+                backgroundColor:'#fff',
+                //主图区域的边距
+                chartMargin:{left:56.5,top:20.5,right:5.5},
+                region: { x: 56.5, y: 20.5, width: initialWidth - 56.5 - 5.5, height: 241 },
+				horizontalLineCount: 1, //水平底纹线的条数
+				verticalLineCount: 9, //垂直底纹线的条数
+				lineStyle: 'dashed', 
+				borderColor: 'black',//指的是第一个和第二个框的边框颜色
+				splitLineColor: 'gray', //底纹线的颜色
+				lineWidth: 1,//修改没有什么变化           
+				//第二个框的样式
+                volume: {
+                    region: { x: 56.5, y: 281.5, height: 48, width: initialWidth - 56.5 - 5.5 },
+                    horizontalLineCount: 2,//水平底纹条的个数 
+                },
+				//第三个框的样式
+                move: {
+                    region:{ x: 56.5, y: 339.5, height: 40, width: initialWidth - 56.5 - 5.5 },
+                },   
+            };
+		//鼠标按下和抬起时的数据点在数组中的位置
+		var downSub,upSub;
+		//canvas3中鼠标按下和抬起时的水平位置
+		var downHPos,upHPos,downVPos,upVPos;
+		//清除原来选中区域时鼠标获取的坐标,数据点在数组中的位置。
+		var delHPos,delSub;
+/*-------------------------------------------------------------------底纹线-------------------------------------------------------------------*/
+//画水平底纹线
+    function drawHLine(color, x0, y0, w, lineWidth, lineStyle) {
+		var dashSize=4;
+        ctx1.strokeStyle = color;
+		if (y0 * 10 % 10 == 0) y0 += .5;
+	   //画虚线
+        if (lineStyle && lineStyle == 'dashed') {
+            var width = 0;
+            do {
+                this.drawHLine(color, width, y0, dashSize, 1, 'solid');
+                width += dashSize * 2;
+            } while (width < w);
+        }
+		//画实线
+        else {
+            ctx1.beginPath();
+            ctx1.moveTo(x0, y0);
+            ctx1.lineTo(x0 + w, y0);
+            ctx1.stroke(); 
+        }
+    }
+//画垂直底纹线
+    function drawVLine(color, x0, y0, h, lineWidth, lineStyle) {
+		var dashSize=4;
+		
+        ctx1.strokeStyle = color;
+        if (x0 * 10 % 10 == 0) x0 += .5;
+        if (lineStyle && lineStyle == 'dashed') {
+            var height = 0;
+            do {
+                this.drawVLine(color, x0, height, dashSize, 1);
+                height += dashSize * 2;
+            } while (height < h);
+        }
+        else {
+            ctx1.beginPath();
+            ctx1.moveTo(x0, y0);
+            ctx1.lineTo(x0, y0 + h);
+            ctx1.stroke();
+
+        }
+    }
+/*----------------------------------------------------------------------------------------------------------------------------------------------*/
+		ctx1.lineWidth=2;
+/*------------------------------------------------------------------第一个框--------------------------------------------------------------------*/
+		ctx1.translate(kOptions.region.x, kOptions.region.y);
+        ctx1.strokeStyle =kOptions.borderColor;
+        ctx1.beginPath();
+        ctx1.rect(0, 0, kOptions.region.width, kOptions.region.height);//定义路径
+        ctx1.stroke();
+		//画第一个框的水平底纹线
+		ctx1.globalAlpha=.7;//以下ctx1的透明度为0.7
+		var spaceHeight = kOptions.region.height / (kOptions.horizontalLineCount + 1);
+        for (var i = 1; i <= kOptions.horizontalLineCount; i++) {
+            var y = spaceHeight * i;
+            if(y * 10 % 10 == 0) y += .5;//如果y<1
+            drawHLine(kOptions.splitLineColor, 0, y, kOptions.region.width, 1, kOptions.lineStyle);
+        }
+        //画第一个框的垂直底纹线
+        var spaceWidth = kOptions.region.width / (kOptions.verticalLineCount + 1);
+        for (var i = 1; i <= kOptions.verticalLineCount; i++) {
+            var w = spaceWidth * i;
+            if (w * 10 % 10 == 0) w += .5;
+			drawVLine(kOptions.splitLineColor, w, 0, kOptions.region.height, 1, kOptions.lineStyle);
+        }
+		//画水平轴的文本标签
+		ctx1.globalAlpha=1;//以下ctx1的透明度为1
+		function drawHorizontalAxisLabels(){
+			ctx1.textAlign='center';
+			ctx1.textBasline='bottom';
+			ctx1.font='bold 13px Arial ';
+			ctx1.fillStyle="#179CFF";
+			var spaceWidth = kOptions.region.width / (kOptions.verticalLineCount + 1);
+			for(var i=0;i<=kOptions.verticalLineCount+1;i++){
+				var y = spaceWidth * i;
+				ctx1.fillText(i,y,kOptions.region.height+15);
+			}
+		}
+		drawHorizontalAxisLabels();
+		//画竖直轴的文本标签
+		function drawVerticalAxisLabels(){
+			ctx1.textAlign='right';
+			ctx1.textBasline='middle';
+			ctx1.font='bold 13px Arial ';
+			ctx1.fillStyle="#179CFF";
+			var spaceHeight = kOptions.region.height / (kOptions.horizontalLineCount + 1);
+			for(var i=0;i<=kOptions.horizontalLineCount+1;i++){
+				var y = spaceHeight * i;
+				ctx1.fillText(50*i-50+' mv ',-3,y+5);
+			}
+		}
+		drawVerticalAxisLabels();
+/*-------------------------------------------------------------------第二个框--------------------------------------------------------------------*/
+		ctx1.translate(0, kOptions.volume.region.y-20);
+        ctx1.strokeStyle =kOptions.borderColor;
+        ctx1.beginPath();
+        ctx1.rect(0, 0, kOptions.volume.region.width, kOptions.volume.region.height);//定义路径
+        ctx1.stroke();
+		//水平底纹线
+		ctx1.globalAlpha=.7;
+        var spaceHeight =kOptions.volume.region.height / (kOptions.volume.horizontalLineCount + 1);
+        for (var i = 1; i <= kOptions.volume.horizontalLineCount; i++) {
+			var y = spaceHeight * i;
+            if (y * 10 % 10 == 0) y += .5;
+            this.drawHLine(kOptions.splitLineColor, 0, y, kOptions.volume.region.width, 1, kOptions.lineStyle);
+        }
+		//画竖直轴的文本标签
+		ctx1.globalAlpha=1;
+		function drawVolumeVerticalAxisLabels(){
+			ctx1.textAlign='right';
+			ctx1.textBasline='middle';
+			ctx1.font='bold 15px Arial ';
+			ctx1.fillStyle="#179CFF";
+			var spaceHeight =kOptions.volume.region.height / (kOptions.volume.horizontalLineCount + 1);
+			for(var i=0;i<=kOptions.volume.horizontalLineCount;i++){
+				var y = spaceHeight * i;
+				if(i==0){
+					ctx1.fillText('肯定   ',-3,y+12);
+				}else if(i==1){
+					ctx1.fillText('可能   ',-3,y+12);
+				}else if(i==2){ 
+					ctx1.fillText('猜测   ',-3,y+12);
+				}
+			}
+		}
+		drawVolumeVerticalAxisLabels();
+	
+/*----------------------------------------------------------显示数据------------------------------------------------------------------*/		
+		ctx2.translate(0,120);
+		ctx2.beginPath();
+		ctx2.strokeStyle = "rgb(0,0,200)";
+		ctx2.lineWidth=.8;
+		var n =data1.length;
+		console.log(n);
+		//定义一个新的数组dataRes
+		var dataRes=Array(n);
+		for(var i=0;i<n;i++){
+			dataRes[i]=0;
+		}
+		console.log(dataRes);
+		for (var i=0;i<=n;i++)
+		{
+			ctx2.lineTo(i/4, -data1[i]*4);
+		}
+		//ctx2.closePath();
+		ctx2.stroke();
+/*------------------------------------------------------------标出纺锤波  弹出对话框-----------------------------------------------------*/
+		function markSpindle(){
+			canvas3.onmousedown = function(ev){
+				var ev = ev || window.event;
+				if(choose.style.display=='block'){
+					alert("请先做出选择");
+				}else{
+					//鼠标按下时的水平和垂直位置
+					downHPos=ev.clientX-canvas3.offsetLeft-out.offsetLeft;
+					downVPos=ev.clientY-canvas3.offsetTop-out.offsetTop;
+					document.onmousemove = function(ev){
+														
+					};
+					document.onmouseup = function(ev){
+						document.onmousemove = null;
+						document.onmouseup = null;	
+						upHPos=ev.clientX-canvas3.offsetLeft-out.offsetLeft;					
+						//获取鼠标按下和抬起时的数据点在数组中的位置
+						downSub=Math.ceil(downHPos*1.6);
+						upSub=Math.floor(upHPos*1.6);
+						if(upSub>downSub&&(dataRes[downSub]==0)&&(dataRes[upSub]==0)){
+						/*
+						1.标记纺锤波：只能从前向后标
+						2.弹出对话框：必须是upSub>downSub,upHPos>downHPos
+						*/
+							console.log("鼠标按下和抬起时的数据点在数组中的位置："+downSub+"---"+upSub);
+						//如果选中一部分没有按确定，则提醒用户还没做出选择，停止执行下面的部分
+						
+						//标出纺锤波
+							ctx3.fillStyle="#000";
+							ctx3.globalAlpha=0.3;
+							ctx3.fillRect(downHPos,0,upHPos-downHPos,241);
+						//弹出对话框
+							choose.style.display='block';
+							choose.style.left=ev.clientX+2+'px';
+							//初始化对话框（因为默认会选中与上一次的最终结果）
+							for(var i=0;i<chooseOption.length;i++){
+								if(chooseOption[i].checked==true){
+									chooseOption[i].checked=false;
+									option=undefined;//不设置的话，option还是原来选中的值，因此提交的时候还会提交原来的值
+								}
+							}
+						}					
+					}
+				}
+
+			}
+		
+		}
+		markSpindle();
+/*------------------------------------------------------------删除原来选中的区域----------------------------------------------------------------*/
+out.onclick=getMousePos;
+	</script>
+</body>
+</html>
